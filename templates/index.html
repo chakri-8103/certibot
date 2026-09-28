@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aditya Grade Sheet Generator - Pixel Perfect PDF Engine</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+        .header-banner {
+            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+            border-bottom: 4px solid #f59e0b;
+            padding: 25px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .card-custom {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .form-label {
+            font-weight: 500;
+            color: #94a3b8;
+        }
+        .form-control, .form-select {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            border-radius: 8px;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #0f172a;
+            border-color: #3b82f6;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        }
+        .btn-generate {
+            background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-generate:hover {
+            background: linear-gradient(90deg, #b45309 0%, #d97706 100%);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+        }
+        .stat-card {
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card.total { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .stat-card.success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .stat-card.failed { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .preview-box {
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            padding: 15px;
+            background: #0f172a;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .preview-box img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Banner -->
+    <div class="header-banner text-center">
+        <div class="container">
+            <h1 class="fw-bold"><i class="fa-solid fa-graduation-cap text-warning me-2"></i> ADITYA GRADE SHEET PDF GENERATOR</h1>
+            <p class="lead mb-0 text-light opacity-90">Pixel-Perfect Grade Sheet Automation & Multiple Sheet Batch Export System</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row g-4">
+            
+            <!-- Input Form Column -->
+            <div class="col-lg-7">
+                <div class="card card-custom p-4 mb-4">
+                    <h4 class="fw-semibold text-warning mb-4"><i class="fa-solid fa-sliders me-2"></i> Configuration & Files</h4>
+                    
+                    <form id="generatorForm" enctype="multipart/form-data">
+                        
+                        <!-- 1. Master PDF Template Upload -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-file-pdf text-danger me-2"></i> 1. Upload Master PDF Template</label>
+                            <input type="file" class="form-control" name="template" accept=".pdf" id="templateInput">
+                            <div class="form-text text-slate-400">
+                                {% if template_exists %}
+                                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Default template (250371509001.pdf) detected</span>
+                                {% else %}
+                                <span class="text-warning"><i class="fa-solid fa-info-circle me-1"></i> Upload original certificate PDF</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 2. Excel Upload -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-file-excel text-success me-2"></i> 2. Upload Excel Data File</label>
+                            <input type="file" class="form-control" name="excel" accept=".xlsx, .xls" id="excelInput">
+                            <div class="form-text text-slate-400">
+                                {% if excel_exists %}
+                                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Default Excel (I SEM DIGIVAL PURPOSE-25 AB F+RV.xlsx) loaded</span>
+                                {% else %}
+                                <span class="text-warning"><i class="fa-solid fa-info-circle me-1"></i> Upload student Excel with sheet names</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 3. Sheet Selector -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-layer-group text-info me-2"></i> 3. Select Target Sheet(s)</label>
+                            <select class="form-select" name="sheet" id="sheetSelect">
+                                <option value="ALL">All Sheets (Generate Subfolders for Each Sheet)</option>
+                                {% for s in sheets %}
+                                <option value="{{ s }}">Sheet: {{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- 4. Controller Signatures Folder/Files -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-file-signature text-primary me-2"></i> 4. Upload Controller Signatures (PNG)</label>
+                            <input type="file" class="form-control" name="signatures" accept="image/png" multiple id="signatureInput">
+                            <div class="form-text text-slate-400">Select multiple PNG signatures for random insertion per certificate.</div>
+                        </div>
+
+                        <!-- 5. Date Configuration -->
+                        <div class="mb-4">
+                            <label class="form-label"><i class="fa-solid fa-calendar-days text-warning me-2"></i> 5. Certificate Issue Date</label>
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <select class="form-select" name="date_mode" id="dateModeSelect">
+                                        <option value="fixed">Fixed Date</option>
+                                        <option value="random">Random Date Range</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-7" id="fixedDateDiv">
+                                    <input type="text" class="form-control" name="fixed_date" value="06.04.2026" placeholder="DD.MM.YYYY">
+                                </div>
+                                <div class="col-md-7 d-none" id="randomDateDiv">
+                                    <div class="input-group">
+                                        <input type="date" class="form-control" name="start_date" value="2026-04-01">
+                                        <span class="input-group-text bg-slate-800 text-light border-slate-700">to</span>
+                                        <input type="date" class="form-control" name="end_date" value="2026-04-15">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Generate Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-generate btn-lg" id="generateBtn">
+                                <i class="fa-solid fa-bolt me-2"></i> GENERATE GRADE SHEETS
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Stats & Progress & Download Column -->
+            <div class="col-lg-5">
+                
+                <!-- Live Progress & Status Card -->
+                <div class="card card-custom p-4 mb-4">
+                    <h4 class="fw-semibold text-info mb-3"><i class="fa-solid fa-chart-line me-2"></i> Live Progress</h4>
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress mb-3" style="height: 22px; background-color: #0f172a;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" id="progressBar" style="width: 0%;">0%</div>
+                    </div>
+                    
+                    <p class="text-center text-slate-300 small mb-4" id="statusMessage">Click 'GENERATE GRADE SHEETS' to begin.</p>
+
+                    <!-- Statistics Grid -->
+                    <div class="row g-3 text-center mb-3">
+                        <div class="col-4">
+                            <div class="stat-card total">
+                                <div class="stat-number text-primary" id="totalStat">0</div>
+                                <div class="small text-slate-400">Total</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card success">
+                                <div class="stat-number text-success" id="genStat">0</div>
+                                <div class="small text-slate-400">Generated</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card failed">
+                                <div class="stat-number text-danger" id="failStat">0</div>
+                                <div class="small text-slate-400">Failed</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Download ZIP Button -->
+                    <div class="d-grid">
+                        <a href="/download/zip" class="btn btn-success btn-lg fw-semibold d-none" id="downloadBtn">
+                            <i class="fa-solid fa-file-zipper me-2"></i> DOWNLOAD OUTPUT.ZIP
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Preview Card -->
+                <div class="card card-custom p-4">
+                    <h5 class="fw-semibold text-light mb-3"><i class="fa-solid fa-eye me-2 text-warning"></i> Certificate Preview</h5>
+                    <div class="preview-box" id="previewContainer">
+                        <div class="text-center text-slate-500" id="previewPlaceholder">
+                            <i class="fa-solid fa-file-pdf fa-3x mb-2"></i>
+                            <p class="mb-0">Sample preview will appear after generation.</p>
+                        </div>
+                        <img src="" alt="Sample Certificate Preview" id="previewImg" class="d-none">
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap JS & jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('dateModeSelect').addEventListener('change', function() {
+            if (this.value === 'fixed') {
+                document.getElementById('fixedDateDiv').classList.remove('d-none');
+                document.getElementById('randomDateDiv').classList.add('d-none');
+            } else {
+                document.getElementById('fixedDateDiv').classList.add('d-none');
+                document.getElementById('randomDateDiv').classList.remove('d-none');
+            }
+        });
+
+        // Dynamic Sheet Loading when Excel file changes
+        document.getElementById('excelInput').addEventListener('change', function() {
+            const formData = new FormData();
+            if (this.files[0]) {
+                formData.append('excel', this.files[0]);
+            }
+            fetch('/api/get_sheets', {
+                method: 'POST',
+                body: formData
+            }).then(res => res.json()).then(data => {
+                if (data.sheets) {
+                    const select = document.getElementById('sheetSelect');
+                    select.innerHTML = '<option value="ALL">All Sheets (Generate Subfolders for Each Sheet)</option>';
+                    data.sheets.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s;
+                        opt.textContent = 'Sheet: ' + s;
+                        select.appendChild(opt);
+                    });
+                }
+            });
+        });
+
+        // Submit Form AJAX Handler
+        document.getElementById('generatorForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('generateBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const progressBar = document.getElementById('progressBar');
+            const statusMsg = document.getElementById('statusMessage');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> GENERATING...';
+            downloadBtn.classList.add('d-none');
+            progressBar.style.width = '10%';
+            progressBar.textContent = '10%';
+            statusMsg.textContent = 'Processing sheets and records...';
+
+            const formData = new FormData(this);
+
+            // Poll status every second
+            const pollInterval = setInterval(() => {
+                fetch('/api/status').then(r => r.json()).then(st => {
+                    if (st.total > 0) {
+                        const pct = Math.round((st.current / st.total) * 100);
+                        progressBar.style.width = pct + '%';
+                        progressBar.textContent = pct + '%';
+                        document.getElementById('totalStat').textContent = st.total;
+                        document.getElementById('genStat').textContent = st.generated;
+                        document.getElementById('failStat').textContent = st.failed;
+                        statusMsg.textContent = st.message;
+                    }
+                });
+            }, 1000);
+
+            fetch('/api/generate', {
+                method: 'POST',
+                body: formData
+            }).then(r => r.json()).then(data => {
+                clearInterval(pollInterval);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-bolt me-2"></i> GENERATE GRADE SHEETS';
+                
+                if (data.status === 'completed') {
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    progressBar.classList.remove('bg-warning');
+                    progressBar.classList.add('bg-success');
+                    statusMsg.textContent = 'All PDFs generated successfully!';
+                    
+                    document.getElementById('totalStat').textContent = data.results.total;
+                    document.getElementById('genStat').textContent = data.results.generated;
+                    document.getElementById('failStat').textContent = data.results.failed;
+
+                    downloadBtn.classList.remove('d-none');
+
+                    if (data.preview_img) {
+                        const previewImg = document.getElementById('previewImg');
+                        const previewPlaceholder = document.getElementById('previewPlaceholder');
+                        previewImg.src = data.preview_img + '?t=' + new Date().getTime();
+                        previewImg.classList.remove('d-none');
+                        previewPlaceholder.classList.add('d-none');
+                    }
+                } else {
+                    statusMsg.textContent = 'Error: ' + (data.error || 'Generation failed');
+                    progressBar.classList.add('bg-danger');
+                }
+            }).catch(err => {
+                clearInterval(pollInterval);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-bolt me-2"></i> GENERATE GRADE SHEETS';
+                statusMsg.textContent = 'Error: ' + err.message;
+            });
+        });
+    </script>
+</body>
+</html>

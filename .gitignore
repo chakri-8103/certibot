@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Large output files & generated zips
+*.zip
+output.zip
+generated_pdfs/*.zip
+
+# OS artifacts
+.DS_Store
+Thumbs.db
