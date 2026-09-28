@@ -97,6 +97,10 @@
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -119,71 +123,33 @@
                     
                     <form id="generatorForm" enctype="multipart/form-data">
                         
-                        <!-- 1. Master PDF Template Upload -->
+                        <!-- 1. Upload Excel Data File -->
                         <div class="mb-3">
-                            <label class="form-label"><i class="fa-solid fa-file-pdf text-danger me-2"></i> 1. Upload Master PDF Template</label>
-                            <input type="file" class="form-control" name="template" accept=".pdf" id="templateInput">
-                            <div class="form-text text-slate-400">
-                                {% if template_exists %}
-                                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Default template (250371509001.pdf) detected</span>
-                                {% else %}
-                                <span class="text-warning"><i class="fa-solid fa-info-circle me-1"></i> Upload original certificate PDF</span>
-                                {% endif %}
+                            <label class="form-label" for="excelInput"><i class="fa-solid fa-file-excel text-success me-2"></i> 1. Upload Student Excel Data File <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" name="excel" accept=".xlsx, .xls" id="excelInput" required>
+                            <div class="form-text text-slate-400" id="excelHelpText">
+                                <i class="fa-solid fa-circle-info me-1"></i> Upload your student Excel file (.xlsx, .xls) to auto-detect sheets.
                             </div>
                         </div>
 
-                        <!-- 2. Excel Upload -->
+                        <!-- 2. Sheet Selector -->
                         <div class="mb-3">
-                            <label class="form-label"><i class="fa-solid fa-file-excel text-success me-2"></i> 2. Upload Excel Data File</label>
-                            <input type="file" class="form-control" name="excel" accept=".xlsx, .xls" id="excelInput">
-                            <div class="form-text text-slate-400">
-                                {% if excel_exists %}
-                                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Default Excel (I SEM DIGIVAL PURPOSE-25 AB F+RV.xlsx) loaded</span>
-                                {% else %}
-                                <span class="text-warning"><i class="fa-solid fa-info-circle me-1"></i> Upload student Excel with sheet names</span>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- 3. Sheet Selector -->
-                        <div class="mb-3">
-                            <label class="form-label"><i class="fa-solid fa-layer-group text-info me-2"></i> 3. Select Target Sheet(s)</label>
+                            <label class="form-label" for="sheetSelect"><i class="fa-solid fa-layer-group text-info me-2"></i> 2. Select Target Sheet(s)</label>
                             <select class="form-select" name="sheet" id="sheetSelect">
-                                <option value="ALL">All Sheets (Generate Subfolders for Each Sheet)</option>
-                                {% for s in sheets %}
-                                <option value="{{ s }}">Sheet: {{ s }}</option>
-                                {% endfor %}
+                                <option value="ALL">All Sheets (Upload Excel to load sheets)</option>
                             </select>
                         </div>
 
-                        <!-- 4. Controller Signatures Folder/Files -->
-                        <div class="mb-3">
-                            <label class="form-label"><i class="fa-solid fa-file-signature text-primary me-2"></i> 4. Upload Controller Signatures (PNG)</label>
-                            <input type="file" class="form-control" name="signatures" accept="image/png" multiple id="signatureInput">
-                            <div class="form-text text-slate-400">Select multiple PNG signatures for random insertion per certificate.</div>
-                        </div>
-
-                        <!-- 5. Date Configuration -->
+                        <!-- 3. Single Certificate Issue Date with Calendar Icon -->
                         <div class="mb-4">
-                            <label class="form-label"><i class="fa-solid fa-calendar-days text-warning me-2"></i> 5. Certificate Issue Date</label>
-                            <div class="row g-2">
-                                <div class="col-md-5">
-                                    <select class="form-select" name="date_mode" id="dateModeSelect">
-                                        <option value="fixed">Fixed Date</option>
-                                        <option value="random">Random Date Range</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-7" id="fixedDateDiv">
-                                    <input type="text" class="form-control" name="fixed_date" value="06.04.2026" placeholder="DD.MM.YYYY">
-                                </div>
-                                <div class="col-md-7 d-none" id="randomDateDiv">
-                                    <div class="input-group">
-                                        <input type="date" class="form-control" name="start_date" value="2026-04-01">
-                                        <span class="input-group-text bg-slate-800 text-light border-slate-700">to</span>
-                                        <input type="date" class="form-control" name="end_date" value="2026-04-15">
-                                    </div>
-                                </div>
+                            <label class="form-label" for="issueDateInput"><i class="fa-solid fa-calendar-day text-warning me-2"></i> 3. Certificate Issue Date</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-secondary border-secondary text-warning" id="calendarIconBtn" role="button" style="cursor: pointer;" title="Click to open calendar">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </span>
+                                <input type="date" class="form-control" name="issue_date" id="issueDateInput" value="2026-04-06" required>
                             </div>
+                            <div class="form-text text-slate-400">Selected date will appear on certificates in DD.MM.YYYY format.</div>
                         </div>
 
                         <!-- Generate Button -->
@@ -260,35 +226,66 @@
     <!-- Bootstrap JS & jQuery -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('dateModeSelect').addEventListener('change', function() {
-            if (this.value === 'fixed') {
-                document.getElementById('fixedDateDiv').classList.remove('d-none');
-                document.getElementById('randomDateDiv').classList.add('d-none');
-            } else {
-                document.getElementById('fixedDateDiv').classList.add('d-none');
-                document.getElementById('randomDateDiv').classList.remove('d-none');
-            }
-        });
+        // Calendar Icon Click Trigger
+        const calendarBtn = document.getElementById('calendarIconBtn');
+        const dateInput = document.getElementById('issueDateInput');
+        if (calendarBtn && dateInput) {
+            calendarBtn.addEventListener('click', function() {
+                if (typeof dateInput.showPicker === 'function') {
+                    dateInput.showPicker();
+                } else {
+                    dateInput.focus();
+                }
+            });
+        }
 
         // Dynamic Sheet Loading when Excel file changes
         document.getElementById('excelInput').addEventListener('change', function() {
-            const formData = new FormData();
-            if (this.files[0]) {
-                formData.append('excel', this.files[0]);
+            const file = this.files[0];
+            const select = document.getElementById('sheetSelect');
+            const helpText = document.getElementById('excelHelpText');
+            
+            if (!file) {
+                select.innerHTML = '<option value="ALL">All Sheets (Upload Excel to load sheets)</option>';
+                if (helpText) {
+                    helpText.innerHTML = '<i class="fa-solid fa-circle-info me-1"></i> Upload student Excel sheet (.xlsx, .xls) to auto-detect sheets.';
+                }
+                return;
             }
+
+            select.innerHTML = '<option value="ALL">Loading sheets from ' + file.name + '...</option>';
+            if (helpText) {
+                helpText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-info me-1"></i> Reading sheets from <strong>' + file.name + '</strong>...';
+            }
+
+            const formData = new FormData();
+            formData.append('excel', file);
+
             fetch('/api/get_sheets', {
                 method: 'POST',
                 body: formData
             }).then(res => res.json()).then(data => {
-                if (data.sheets) {
-                    const select = document.getElementById('sheetSelect');
-                    select.innerHTML = '<option value="ALL">All Sheets (Generate Subfolders for Each Sheet)</option>';
+                if (data.sheets && data.sheets.length > 0) {
+                    select.innerHTML = '<option value="ALL">All Sheets (' + data.sheets.length + ' sheets found)</option>';
                     data.sheets.forEach(s => {
                         const opt = document.createElement('option');
                         opt.value = s;
                         opt.textContent = 'Sheet: ' + s;
                         select.appendChild(opt);
                     });
+                    if (helpText) {
+                        helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets.length + ' sheets detected)</span>';
+                    }
+                } else {
+                    select.innerHTML = '<option value="ALL">Error reading sheets</option>';
+                    if (helpText) {
+                        helpText.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> ' + (data.error || 'No sheets found') + '</span>';
+                    }
+                }
+            }).catch(err => {
+                select.innerHTML = '<option value="ALL">Error reading sheets</option>';
+                if (helpText) {
+                    helpText.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> ' + err.message + '</span>';
                 }
             });
         });
@@ -296,6 +293,13 @@
         // Submit Form AJAX Handler
         document.getElementById('generatorForm').addEventListener('submit', function(e) {
             e.preventDefault();
+
+            const excelFile = document.getElementById('excelInput').files[0];
+            if (!excelFile) {
+                alert('Please upload a student Excel data file (.xlsx, .xls) first.');
+                document.getElementById('excelInput').focus();
+                return;
+            }
 
             const btn = document.getElementById('generateBtn');
             const downloadBtn = document.getElementById('downloadBtn');

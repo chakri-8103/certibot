@@ -3,6 +3,7 @@ import io
 import re
 import zipfile
 import random
+import shutil
 import datetime
 import openpyxl
 import pandas as pd
@@ -73,16 +74,41 @@ def ensure_default_signatures(signatures_dir="signatures"):
     os.makedirs(signatures_dir, exist_ok=True)
     existing = [f for f in os.listdir(signatures_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
     if not existing:
-        colors_list = [(0, 0, 128, 255), (0, 51, 102, 255), (20, 20, 80, 255)]
-        for i, col in enumerate(colors_list, 1):
-            img = Image.new("RGBA", (300, 100), (255, 255, 255, 0))
-            draw = ImageDraw.Draw(img)
-            draw.line([(20, 60), (60, 20), (100, 70), (140, 30), (180, 80), (250, 40)], fill=col, width=4)
-            draw.line([(10, 75 + i*2), (280, 70)], fill=col, width=3)
-            sig_file = os.path.join(signatures_dir, f"controller_sig_{i}.png")
-            img.save(sig_file)
-            existing.append(f"controller_sig_{i}.png")
+        root_default = os.path.join(os.getcwd(), "default_signature.png")
+        if os.path.exists(root_default):
+            dest = os.path.join(signatures_dir, "default_signature.png")
+            shutil.copy(root_default, dest)
+            existing.append("default_signature.png")
+        else:
+            colors_list = [(0, 0, 128, 255), (0, 51, 102, 255), (20, 20, 80, 255)]
+            for i, col in enumerate(colors_list, 1):
+                img = Image.new("RGBA", (300, 100), (255, 255, 255, 0))
+                draw = ImageDraw.Draw(img)
+                draw.line([(20, 60), (60, 20), (100, 70), (140, 30), (180, 80), (250, 40)], fill=col, width=4)
+                draw.line([(10, 75 + i*2), (280, 70)], fill=col, width=3)
+                sig_file = os.path.join(signatures_dir, f"controller_sig_{i}.png")
+                img.save(sig_file)
+                existing.append(f"controller_sig_{i}.png")
     return [os.path.join(signatures_dir, f) for f in existing]
+
+def format_display_date(date_val):
+    if not date_val:
+        return "06.04.2026"
+    date_str = str(date_val).strip()
+    try:
+        if "-" in date_str:
+            dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            return dt.strftime("%d.%m.%Y")
+        elif "/" in date_str:
+            parts = date_str.split("/")
+            if len(parts[0]) == 4:
+                dt = datetime.datetime.strptime(date_str, "%Y/%m/%d")
+            else:
+                dt = datetime.datetime.strptime(date_str, "%d/%m/%Y")
+            return dt.strftime("%d.%m.%Y")
+    except Exception:
+        pass
+    return date_str
 
 def get_random_date_between(start_date_str, end_date_str):
     try:
@@ -325,7 +351,7 @@ def process_excel_and_generate_all(
         if date_mode == "random":
             cur_date = get_random_date_between(start_date, end_date)
         else:
-            cur_date = fixed_date or "06.04.2026"
+            cur_date = format_display_date(fixed_date or "06.04.2026")
 
         sig_path = random.choice(signatures)
 

@@ -15,9 +15,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 os.makedirs(app.config['SIGNATURE_FOLDER'], exist_ok=True)
 
-# Default template & excel paths if available in workspace
+# Default static master PDF template
 DEFAULT_TEMPLATE = os.path.join(os.getcwd(), '250371509001.pdf')
-DEFAULT_EXCEL = os.path.join(os.getcwd(), 'I SEM DIGIVAL PURPOSE-25 AB F+RV.xlsx')
 
 generation_status = {
     "status": "idle",
@@ -32,40 +31,22 @@ generation_status = {
 
 @app.route('/')
 def index():
-    template_exists = os.path.exists(DEFAULT_TEMPLATE)
-    excel_exists = os.path.exists(DEFAULT_EXCEL)
-    sheets = []
-    if excel_exists:
-        try:
-            wb = openpyxl.load_workbook(DEFAULT_EXCEL, read_only=True)
-            sheets = wb.sheetnames
-        except Exception:
-            pass
-            
-    return render_template(
-        'index.html',
-        template_exists=template_exists,
-        excel_exists=excel_exists,
-        sheets=sheets
-    )
+    return render_template('index.html')
 
 @app.route('/api/get_sheets', methods=['POST'])
 def get_sheets():
     excel_file = request.files.get('excel')
-    if excel_file:
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], 'uploaded_excel.xlsx')
-        excel_file.save(save_path)
-    else:
-        save_path = DEFAULT_EXCEL
+    if not excel_file or not excel_file.filename:
+        return jsonify({'error': 'Please upload an Excel data file.'}), 400
         
-    if not os.path.exists(save_path):
-        return jsonify({'error': 'Excel file not found'}), 400
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], 'uploaded_excel.xlsx')
+    excel_file.save(save_path)
         
     try:
         wb = openpyxl.load_workbook(save_path, read_only=True)
         return jsonify({'sheets': wb.sheetnames})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Failed to read Excel file: {str(e)}'}), 500
 
 @app.route('/api/generate', methods=['POST'])
 def generate():
@@ -81,40 +62,37 @@ def generate():
         "preview_img": None
     }
 
-    # Handle Uploads
-    template_file = request.files.get('template')
-    if template_file and template_file.filename:
-        template_path = os.path.join(app.config['UPLOAD_FOLDER'], 'template.pdf')
-        template_file.save(template_path)
-    else:
-        template_path = DEFAULT_TEMPLATE
+    # Static Master Template from folder
+    template_path = DEFAULT_TEMPLATE
+    if not os.path.exists(template_path):
+        fallback = os.path.join(os.getcwd(), 'pristine_template.pdf')
+        if os.path.exists(fallback):
+            template_path = fallback
+        else:
+            return jsonify({'error': 'Static master PDF template (250371509001.pdf) not found in folder.'}), 400
 
+    # User uploaded Excel File
     excel_file = request.files.get('excel')
     if excel_file and excel_file.filename:
         excel_path = os.path.join(app.config['UPLOAD_FOLDER'], 'data.xlsx')
         excel_file.save(excel_path)
     else:
-        excel_path = DEFAULT_EXCEL
+        uploaded_cache = os.path.join(app.config['UPLOAD_FOLDER'], 'uploaded_excel.xlsx')
+        if os.path.exists(uploaded_cache):
+            excel_path = uploaded_cache
+        else:
+            return jsonify({'error': 'Please upload an Excel data file before generating.'}), 400
 
-    signature_files = request.files.getlist('signatures')
+    # Static controller signatures from folder
     sig_folder = app.config['SIGNATURE_FOLDER']
-    if signature_files and any(f.filename for f in signature_files):
-        # Clear previous signatures
-        shutil.rmtree(sig_folder, ignore_errors=True)
-        os.makedirs(sig_folder, exist_ok=True)
-        for f in signature_files:
-            if f.filename:
-                f.save(os.path.join(sig_folder, f.filename))
-    else:
-        generator.ensure_default_signatures(sig_folder)
+    generator.ensure_default_signatures(sig_folder)
 
     selected_sheet = request.form.get('sheet', 'ALL')
     sheets_param = None if selected_sheet == 'ALL' else [selected_sheet]
 
-    date_mode = request.form.get('date_mode', 'fixed')
-    fixed_date = request.form.get('fixed_date', '06.04.2026')
-    start_date = request.form.get('start_date', '2026-04-01')
-    end_date = request.form.get('end_date', '2026-04-15')
+    # Single Issue Date
+    raw_date = request.form.get('issue_date') or request.form.get('fixed_date') or '2026-04-06'
+    fixed_date = generator.format_display_date(raw_date)
 
     def update_progress(current, total, gen, fail, msg):
         global generation_status
@@ -131,10 +109,8 @@ def generate():
             signature_folder=sig_folder,
             output_base_dir=app.config['GENERATED_FOLDER'],
             selected_sheets=sheets_param,
-            date_mode=date_mode,
+            date_mode="fixed",
             fixed_date=fixed_date,
-            start_date=start_date,
-            end_date=end_date,
             progress_callback=update_progress
         )
 
