@@ -13,93 +13,152 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #f8fafc;
+            background-color: #f1f5f9;
+            color: #0f172a;
             min-height: 100vh;
             padding-bottom: 50px;
         }
         .header-banner {
-            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+            background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
             border-bottom: 4px solid #f59e0b;
-            padding: 25px 0;
+            padding: 24px 0;
             margin-bottom: 30px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            color: #ffffff;
+        }
+        .header-banner h1 {
+            color: #ffffff;
+            font-size: 1.85rem;
+        }
+        .header-banner p {
+            color: #e0e7ff;
+            font-size: 0.95rem;
         }
         .card-custom {
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .card-custom:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
+        }
+        .card-title-header {
+            font-weight: 600;
+            color: #1e3a8a;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
         }
         .form-label {
-            font-weight: 500;
-            color: #94a3b8;
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.92rem;
+            margin-bottom: 6px;
+        }
+        .form-text {
+            color: #64748b;
+            font-size: 0.83rem;
+            margin-top: 5px;
         }
         .form-control, .form-select {
-            background-color: #0f172a;
-            border: 1px solid #334155;
-            color: #f8fafc;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #0f172a;
             border-radius: 8px;
+            font-size: 0.95rem;
+            padding: 9px 13px;
         }
         .form-control:focus, .form-select:focus {
-            background-color: #0f172a;
-            border-color: #3b82f6;
-            color: #ffffff;
-            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+            background-color: #ffffff;
+            border-color: #2563eb;
+            color: #0f172a;
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
+        }
+        .input-group-text {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+        }
+        .sig-preview-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            min-width: 140px;
+        }
+        .sig-preview-box img {
+            max-height: 38px;
+            max-width: 130px;
+            object-fit: contain;
+            transition: opacity 0.2s ease;
         }
         .btn-generate {
             background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
             border: none;
             color: #ffffff;
             font-weight: 600;
-            padding: 12px 28px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
-            transition: all 0.3s ease;
+            padding: 12px 24px;
+            border-radius: 9px;
+            font-size: 1.05rem;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+            transition: all 0.25s ease;
         }
         .btn-generate:hover {
             background: linear-gradient(90deg, #b45309 0%, #d97706 100%);
             color: #ffffff;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.45);
+        }
+        .btn-generate:disabled {
+            opacity: 0.75;
+            transform: none;
         }
         .stat-card {
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 16px 10px;
             text-align: center;
         }
-        .stat-card.total { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); }
-        .stat-card.success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); }
-        .stat-card.failed { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .stat-card.total {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+        }
+        .stat-card.total .stat-number { color: #1d4ed8; }
+        .stat-card.success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+        .stat-card.success .stat-number { color: #16a34a; }
+        .stat-card.failed {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+        .stat-card.failed .stat-number { color: #dc2626; }
         .stat-number {
-            font-size: 2rem;
+            font-size: 1.9rem;
             font-weight: 700;
+            line-height: 1.1;
         }
-        .preview-box {
-            border: 2px dashed #334155;
-            border-radius: 12px;
-            padding: 15px;
-            background: #0f172a;
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .stat-label {
+            font-size: 0.82rem;
+            color: #475569;
+            font-weight: 500;
+            margin-top: 4px;
         }
-        .preview-box img {
-            max-width: 100%;
+        .progress {
+            background-color: #e2e8f0;
             border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
         }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
+        .progress-bar {
+            background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
+            font-weight: 600;
+            font-size: 0.85rem;
         }
     </style>
 </head>
@@ -108,48 +167,158 @@
     <!-- Header Banner -->
     <div class="header-banner text-center">
         <div class="container">
-            <h1 class="fw-bold"><i class="fa-solid fa-graduation-cap text-warning me-2"></i> ADITYA GRADE SHEET PDF GENERATOR</h1>
-            <p class="lead mb-0 text-light opacity-90">Pixel-Perfect Grade Sheet Automation & Multiple Sheet Batch Export System</p>
+            <h1 class="fw-bold mb-1"><i class="fa-solid fa-graduation-cap text-warning me-2"></i> ADITYA GRADE SHEET PDF GENERATOR</h1>
+            <p class="mb-0 opacity-90">Pixel-Perfect Grade Sheet Automation & Multiple Sheet Batch Export System</p>
         </div>
     </div>
 
     <div class="container">
-        <div class="row g-4">
+        <div class="row g-4 justify-content-center">
             
-            <!-- Input Form Column -->
+            <!-- Configuration Column -->
             <div class="col-lg-7">
                 <div class="card card-custom p-4 mb-4">
-                    <h4 class="fw-semibold text-warning mb-4"><i class="fa-solid fa-sliders me-2"></i> Configuration & Files</h4>
+                    <h5 class="card-title-header"><i class="fa-solid fa-sliders text-primary me-2"></i> Configuration & Files</h5>
                     
                     <form id="generatorForm" enctype="multipart/form-data">
                         
                         <!-- 1. Upload Excel Data File -->
                         <div class="mb-3">
-                            <label class="form-label" for="excelInput"><i class="fa-solid fa-file-excel text-success me-2"></i> 1. Upload Student Excel Data File <span class="text-danger">*</span></label>
+                            <label class="form-label" for="excelInput">
+                                <i class="fa-solid fa-file-excel text-success me-2"></i> 1. Upload Student Excel Data File <span class="text-danger">*</span>
+                            </label>
                             <input type="file" class="form-control" name="excel" accept=".xlsx, .xls" id="excelInput" required>
-                            <div class="form-text text-slate-400" id="excelHelpText">
+                            <div class="form-text" id="excelHelpText">
                                 <i class="fa-solid fa-circle-info me-1"></i> Upload your student Excel file (.xlsx, .xls) to auto-detect sheets.
                             </div>
                         </div>
 
                         <!-- 2. Sheet Selector -->
                         <div class="mb-3">
-                            <label class="form-label" for="sheetSelect"><i class="fa-solid fa-layer-group text-info me-2"></i> 2. Select Target Sheet(s)</label>
+                            <label class="form-label" for="sheetSelect">
+                                <i class="fa-solid fa-layer-group text-primary me-2"></i> 2. Select Target Sheet(s)
+                            </label>
                             <select class="form-select" name="sheet" id="sheetSelect">
-                                <option value="ALL">All Sheets (Upload Excel to load sheets)</option>
+                                <option value="ALL" data-title="AUTO">All Sheets (Upload Excel to load sheets & auto-map headers)</option>
                             </select>
+                            <div class="form-text">Selecting a specific sheet will automatically select its course title below.</div>
                         </div>
 
-                        <!-- 3. Single Certificate Issue Date with Calendar Icon -->
-                        <div class="mb-4">
-                            <label class="form-label" for="issueDateInput"><i class="fa-solid fa-calendar-day text-warning me-2"></i> 3. Certificate Issue Date</label>
+                        <!-- 3. Header Line 1 (Course Title) -->
+                        <div class="mb-3">
+                            <label class="form-label" for="headerTitleInput">
+                                <i class="fa-solid fa-heading text-primary me-2"></i> 3. Header Line 1 (Course Title)
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text bg-secondary border-secondary text-warning" id="calendarIconBtn" role="button" style="cursor: pointer;" title="Click to open calendar">
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                </span>
-                                <input type="date" class="form-control" name="issue_date" id="issueDateInput" value="2026-04-06" required>
+                                <span class="input-group-text"><i class="fa-solid fa-graduation-cap"></i></span>
+                                <input type="text" class="form-control" name="header_title" id="headerTitleInput" value="AUTO" list="headerTitlesList" placeholder="Select or type course title...">
                             </div>
-                            <div class="form-text text-slate-400">Selected date will appear on certificates in DD.MM.YYYY format.</div>
+                            <datalist id="headerTitlesList">
+                                <option value="AUTO">AUTO (Detect dynamically per sheet/student)</option>
+                                <option value="STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS">STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE">STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE">STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY">STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES">STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION">STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE">STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE</option>
+                                <option value="STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY">STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY</option>
+                                <option value="STATEMENT OF GRADES FOR BBA (HONOURS)">STATEMENT OF GRADES FOR BBA (HONOURS)</option>
+                                <option value="STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING">STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING</option>
+                                <option value="STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS">STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS</option>
+                                <option value="STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS">STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS</option>
+                                <option value="STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE">STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE</option>
+                                <option value="STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI">STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI</option>
+                            </datalist>
+                            <div class="form-text">Default is <code>AUTO</code> (auto-detects title per sheet/student). Or pick/customize any title.</div>
+                        </div>
+
+                        <!-- 4. Header Line 2 (Examination Session) -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fa-solid fa-calendar-check text-primary me-2"></i> 4. Header Line 2 (Examination Session)
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <label class="form-label small text-muted mb-1" for="semesterSelect">Semester / Year</label>
+                                    <select class="form-select form-select-sm" name="semester" id="semesterSelect">
+                                        <option value="FIRST SEMESTER" selected>FIRST SEMESTER</option>
+                                        <option value="SECOND SEMESTER">SECOND SEMESTER</option>
+                                        <option value="THIRD SEMESTER">THIRD SEMESTER</option>
+                                        <option value="FOURTH SEMESTER">FOURTH SEMESTER</option>
+                                        <option value="FIFTH SEMESTER">FIFTH SEMESTER</option>
+                                        <option value="SIXTH SEMESTER">SIXTH SEMESTER</option>
+                                        <option value="FIRST YEAR">FIRST YEAR</option>
+                                        <option value="SECOND YEAR">SECOND YEAR</option>
+                                        <option value="FINAL YEAR">FINAL YEAR</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted mb-1" for="examMonthSelect">Exam Month</label>
+                                    <select class="form-select form-select-sm" name="exam_month" id="examMonthSelect">
+                                        <option value="JANUARY" selected>JANUARY</option>
+                                        <option value="FEBRUARY">FEBRUARY</option>
+                                        <option value="MARCH">MARCH</option>
+                                        <option value="APRIL">APRIL</option>
+                                        <option value="MAY">MAY</option>
+                                        <option value="JUNE">JUNE</option>
+                                        <option value="JULY">JULY</option>
+                                        <option value="AUGUST">AUGUST</option>
+                                        <option value="SEPTEMBER">SEPTEMBER</option>
+                                        <option value="OCTOBER">OCTOBER</option>
+                                        <option value="NOVEMBER">NOVEMBER</option>
+                                        <option value="DECEMBER">DECEMBER</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1" for="examYearInput">Exam Year</label>
+                                    <input type="text" class="form-control form-control-sm" name="exam_year" id="examYearInput" value="2026" placeholder="2026">
+                                </div>
+                            </div>
+                            <!-- Live Line 2 Preview -->
+                            <div class="p-2 mt-2 bg-light border rounded small">
+                                <span class="fw-semibold text-primary"><i class="fa-solid fa-eye me-1"></i> Line 2 Preview:</span>
+                                <span id="line2PreviewText" class="font-monospace text-dark fw-medium">DEGREE EXAMINATIONS AT THE END OF FIRST SEMESTER - JANUARY - 2026</span>
+                            </div>
+                        </div>
+
+                        <!-- 5. Campus ID for Principal Signature -->
+                        <div class="mb-3">
+                            <label class="form-label" for="campusIdInput">
+                                <i class="fa-solid fa-building-columns text-primary me-2"></i> 5. Campus ID <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fa-solid fa-signature"></i>
+                                </span>
+                                <input type="text" class="form-control" name="campus_id" id="campusIdInput" value="31" placeholder="Enter Campus ID (e.g. 30, 31)" required>
+                            </div>
+                            <!-- Live Signature Preview Box -->
+                            <div class="mt-2">
+                                <div class="sig-preview-box" id="sigPreviewContainer">
+                                    <img id="sigPreviewImg" src="/api/preview_signature?campus_id=31" alt="Signature Preview">
+                                    <span id="sigNotFound" class="text-danger small fw-semibold d-none">
+                                        <i class="fa-solid fa-circle-xmark me-1"></i> Signature not found
+                                    </span>
+                                    <div id="sigSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 6. Published Result Date -->
+                        <div class="mb-4">
+                            <label class="form-label" for="publishedDateInput">
+                                <i class="fa-solid fa-calendar-day text-primary me-2"></i> 6. Published Result Date
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="calendarIconBtn" role="button" style="cursor: pointer;" title="Click to open calendar">
+                                    <i class="fa-solid fa-calendar-days text-primary"></i>
+                                </span>
+                                <input type="date" class="form-control" name="published_date" id="publishedDateInput" value="2026-04-06" required>
+                            </div>
+                            <div class="form-text">Appears on bottom-left of certificate as <code>DATE : DD.MM.YYYY</code>.</div>
                         </div>
 
                         <!-- Generate Button -->
@@ -162,38 +331,38 @@
                 </div>
             </div>
 
-            <!-- Stats & Progress & Download Column -->
+            <!-- Stats & Progress Column -->
             <div class="col-lg-5">
                 
                 <!-- Live Progress & Status Card -->
                 <div class="card card-custom p-4 mb-4">
-                    <h4 class="fw-semibold text-info mb-3"><i class="fa-solid fa-chart-line me-2"></i> Live Progress</h4>
+                    <h5 class="card-title-header"><i class="fa-solid fa-chart-line text-primary me-2"></i> Live Progress</h5>
                     
                     <!-- Progress Bar -->
-                    <div class="progress mb-3" style="height: 22px; background-color: #0f172a;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" id="progressBar" style="width: 0%;">0%</div>
+                    <div class="progress mb-3" style="height: 22px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progressBar" style="width: 0%;">0%</div>
                     </div>
                     
-                    <p class="text-center text-slate-300 small mb-4" id="statusMessage">Click 'GENERATE GRADE SHEETS' to begin.</p>
+                    <p class="text-center text-slate-600 small mb-4" id="statusMessage">Click 'GENERATE GRADE SHEETS' to begin.</p>
 
                     <!-- Statistics Grid -->
-                    <div class="row g-3 text-center mb-3">
+                    <div class="row g-3 text-center mb-4">
                         <div class="col-4">
                             <div class="stat-card total">
-                                <div class="stat-number text-primary" id="totalStat">0</div>
-                                <div class="small text-slate-400">Total</div>
+                                <div class="stat-number" id="totalStat">0</div>
+                                <div class="stat-label">Total</div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="stat-card success">
-                                <div class="stat-number text-success" id="genStat">0</div>
-                                <div class="small text-slate-400">Generated</div>
+                                <div class="stat-number" id="genStat">0</div>
+                                <div class="stat-label">Generated</div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="stat-card failed">
-                                <div class="stat-number text-danger" id="failStat">0</div>
-                                <div class="small text-slate-400">Failed</div>
+                                <div class="stat-number" id="failStat">0</div>
+                                <div class="stat-label">Failed</div>
                             </div>
                         </div>
                     </div>
@@ -206,29 +375,17 @@
                     </div>
                 </div>
 
-                <!-- Preview Card -->
-                <div class="card card-custom p-4">
-                    <h5 class="fw-semibold text-light mb-3"><i class="fa-solid fa-eye me-2 text-warning"></i> Certificate Preview</h5>
-                    <div class="preview-box" id="previewContainer">
-                        <div class="text-center text-slate-500" id="previewPlaceholder">
-                            <i class="fa-solid fa-file-pdf fa-3x mb-2"></i>
-                            <p class="mb-0">Sample preview will appear after generation.</p>
-                        </div>
-                        <img src="" alt="Sample Certificate Preview" id="previewImg" class="d-none">
-                    </div>
-                </div>
-
             </div>
 
         </div>
     </div>
 
-    <!-- Bootstrap JS & jQuery -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Calendar Icon Click Trigger
         const calendarBtn = document.getElementById('calendarIconBtn');
-        const dateInput = document.getElementById('issueDateInput');
+        const dateInput = document.getElementById('publishedDateInput');
         if (calendarBtn && dateInput) {
             calendarBtn.addEventListener('click', function() {
                 if (typeof dateInput.showPicker === 'function') {
@@ -239,6 +396,97 @@
             });
         }
 
+        // Real-time Header Line 2 Preview Sync
+        function updateLine2Preview() {
+            const sem = (document.getElementById('semesterSelect').value || 'FIRST SEMESTER').trim();
+            const month = (document.getElementById('examMonthSelect').value || 'JANUARY').trim();
+            const year = (document.getElementById('examYearInput').value || '2026').trim();
+            const previewEl = document.getElementById('line2PreviewText');
+            if (previewEl) {
+                previewEl.textContent = `DEGREE EXAMINATIONS AT THE END OF ${sem} - ${month} - ${year}`;
+            }
+        }
+        const semSelect = document.getElementById('semesterSelect');
+        const monthSelect = document.getElementById('examMonthSelect');
+        const yearInput = document.getElementById('examYearInput');
+        if (semSelect) semSelect.addEventListener('change', updateLine2Preview);
+        if (monthSelect) monthSelect.addEventListener('change', updateLine2Preview);
+        if (yearInput) yearInput.addEventListener('input', updateLine2Preview);
+
+        // Header Line 1 & Sheet Selection Sync
+        const sheetSelect = document.getElementById('sheetSelect');
+        const headerTitleInput = document.getElementById('headerTitleInput');
+        if (sheetSelect && headerTitleInput) {
+            sheetSelect.addEventListener('change', function() {
+                const selectedOpt = this.options[this.selectedIndex];
+                if (this.value === 'ALL') {
+                    headerTitleInput.value = 'AUTO';
+                } else if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.title) {
+                    headerTitleInput.value = selectedOpt.dataset.title;
+                }
+            });
+        }
+
+        // Automatic Campus Signature Fetch on Input
+        const campusInput = document.getElementById('campusIdInput');
+        const sigImg = document.getElementById('sigPreviewImg');
+        const sigSpinner = document.getElementById('sigSpinner');
+        let sigDebounceTimer = null;
+
+        function updateSignature(cid) {
+            cid = (cid || '').trim();
+            const sigNotFound = document.getElementById('sigNotFound');
+
+            if (!cid) {
+                if (sigImg) sigImg.classList.add('d-none');
+                if (sigNotFound) sigNotFound.classList.remove('d-none');
+                if (sigSpinner) sigSpinner.classList.add('d-none');
+                return;
+            }
+
+            if (sigSpinner) sigSpinner.classList.remove('d-none');
+            if (sigNotFound) sigNotFound.classList.add('d-none');
+            if (sigImg) {
+                sigImg.classList.remove('d-none');
+                sigImg.style.opacity = '0.3';
+            }
+
+            const testImg = new Image();
+            testImg.onload = function() {
+                if (sigSpinner) sigSpinner.classList.add('d-none');
+                if (sigNotFound) sigNotFound.classList.add('d-none');
+                if (sigImg) {
+                    sigImg.src = testImg.src;
+                    sigImg.style.opacity = '1';
+                    sigImg.classList.remove('d-none');
+                }
+            };
+            testImg.onerror = function() {
+                if (sigSpinner) sigSpinner.classList.add('d-none');
+                if (sigImg) sigImg.classList.add('d-none');
+                if (sigNotFound) sigNotFound.classList.remove('d-none');
+            };
+            testImg.src = '/api/preview_signature?campus_id=' + encodeURIComponent(cid) + '&t=' + Date.now();
+        }
+
+        if (campusInput) {
+            campusInput.addEventListener('input', function() {
+                clearTimeout(sigDebounceTimer);
+                const val = this.value.trim();
+                sigDebounceTimer = setTimeout(() => {
+                    updateSignature(val);
+                }, 350);
+            });
+
+            campusInput.addEventListener('change', function() {
+                clearTimeout(sigDebounceTimer);
+                updateSignature(this.value.trim());
+            });
+
+            // Initial Load
+            updateSignature(campusInput.value.trim() || '31');
+        }
+
         // Dynamic Sheet Loading when Excel file changes
         document.getElementById('excelInput').addEventListener('change', function() {
             const file = this.files[0];
@@ -246,16 +494,16 @@
             const helpText = document.getElementById('excelHelpText');
             
             if (!file) {
-                select.innerHTML = '<option value="ALL">All Sheets (Upload Excel to load sheets)</option>';
+                select.innerHTML = '<option value="ALL" data-title="AUTO">All Sheets (Upload Excel to load sheets & auto-map headers)</option>';
                 if (helpText) {
-                    helpText.innerHTML = '<i class="fa-solid fa-circle-info me-1"></i> Upload student Excel sheet (.xlsx, .xls) to auto-detect sheets.';
+                    helpText.innerHTML = '<i class="fa-solid fa-circle-info me-1"></i> Upload your student Excel file (.xlsx, .xls) to auto-detect sheets.';
                 }
                 return;
             }
 
-            select.innerHTML = '<option value="ALL">Loading sheets from ' + file.name + '...</option>';
+            select.innerHTML = '<option value="ALL" data-title="AUTO">Loading sheets from ' + file.name + '...</option>';
             if (helpText) {
-                helpText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-info me-1"></i> Reading sheets from <strong>' + file.name + '</strong>...';
+                helpText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Reading sheets from <strong>' + file.name + '</strong>...';
             }
 
             const formData = new FormData();
@@ -265,25 +513,37 @@
                 method: 'POST',
                 body: formData
             }).then(res => res.json()).then(data => {
-                if (data.sheets && data.sheets.length > 0) {
-                    select.innerHTML = '<option value="ALL">All Sheets (' + data.sheets.length + ' sheets found)</option>';
+                if (data.sheets_info && data.sheets_info.length > 0) {
+                    select.innerHTML = '<option value="ALL" data-title="AUTO">All Sheets (' + data.sheets_info.length + ' sheets detected - Auto-map headers)</option>';
+                    data.sheets_info.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.name;
+                        opt.dataset.title = s.header_title;
+                        opt.textContent = s.name + ' — ' + s.header_title;
+                        select.appendChild(opt);
+                    });
+                    if (helpText) {
+                        helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets_info.length + ' sheets detected)</span>';
+                    }
+                } else if (data.sheets && data.sheets.length > 0) {
+                    select.innerHTML = '<option value="ALL" data-title="AUTO">All Sheets (' + data.sheets.length + ' sheets)</option>';
                     data.sheets.forEach(s => {
                         const opt = document.createElement('option');
                         opt.value = s;
-                        opt.textContent = 'Sheet: ' + s;
+                        opt.textContent = s;
                         select.appendChild(opt);
                     });
                     if (helpText) {
                         helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets.length + ' sheets detected)</span>';
                     }
                 } else {
-                    select.innerHTML = '<option value="ALL">Error reading sheets</option>';
+                    select.innerHTML = '<option value="ALL" data-title="AUTO">Error reading sheets</option>';
                     if (helpText) {
                         helpText.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> ' + (data.error || 'No sheets found') + '</span>';
                     }
                 }
             }).catch(err => {
-                select.innerHTML = '<option value="ALL">Error reading sheets</option>';
+                select.innerHTML = '<option value="ALL" data-title="AUTO">Error reading sheets</option>';
                 if (helpText) {
                     helpText.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> ' + err.message + '</span>';
                 }
@@ -350,14 +610,6 @@
                     document.getElementById('failStat').textContent = data.results.failed;
 
                     downloadBtn.classList.remove('d-none');
-
-                    if (data.preview_img) {
-                        const previewImg = document.getElementById('previewImg');
-                        const previewPlaceholder = document.getElementById('previewPlaceholder');
-                        previewImg.src = data.preview_img + '?t=' + new Date().getTime();
-                        previewImg.classList.remove('d-none');
-                        previewPlaceholder.classList.add('d-none');
-                    }
                 } else {
                     statusMsg.textContent = 'Error: ' + (data.error || 'Generation failed');
                     progressBar.classList.add('bg-danger');

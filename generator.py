@@ -5,6 +5,8 @@ import zipfile
 import random
 import shutil
 import datetime
+import urllib.request
+import numpy as np
 import openpyxl
 import pandas as pd
 import pypdf
@@ -24,9 +26,121 @@ GRADE_POINTS = {
     "F": 0, "FAIL": 0, "AB": 0, "ABSENT": 0, "0": 0
 }
 
+# 14 Official Programme Header Titles
+ALL_HEADER_TITLES = [
+    "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE",
+    "STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY",
+    "STATEMENT OF GRADES FOR BBA (HONOURS)",
+    "STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING",
+    "STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS",
+    "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS",
+    "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE",
+    "STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI"
+]
+
+# Sheet to Header Title Mapping Dictionary
+SHEET_TO_HEADER_TITLE = {
+    "BCOM-TEL": "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS",
+    "BCOM-HIN": "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS",
+    "BCOM-TEL-POINTS": "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS",
+    "BCOM": "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS",
+    "CS TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    "CS HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    "CS DIS": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    "CS-TEL-II-SEM": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    "CS": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    "DS TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE",
+    "DS HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE",
+    "DS": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE",
+    "MB TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY",
+    "MB HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY",
+    "MB DIS": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY",
+    "MB": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY",
+    "FISH TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES",
+    "FISH HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES",
+    "FISH": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES",
+    "ANIM TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION",
+    "ANIM TEL ": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION",
+    "ANIM HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION",
+    "ANIM": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION",
+    "AI-TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE",
+    "AI-HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE",
+    "AI": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE",
+    "CHEM TEL": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY",
+    "CHEM HIN": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY",
+    "CHEM": "STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY",
+    "BBA TEL": "STATEMENT OF GRADES FOR BBA (HONOURS)",
+    "BBA HIN": "STATEMENT OF GRADES FOR BBA (HONOURS)",
+    "BBA": "STATEMENT OF GRADES FOR BBA (HONOURS)",
+    "BBA DM-TEL": "STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING",
+    "BBA DM-HIN": "STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING",
+    "BBA DM": "STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING",
+    "BBA BA-TEL": "STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS",
+    "BBA BA-HIN": "STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS",
+    "BBA BA": "STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS",
+    "BCA TEL": "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS",
+    "BCA HIN": "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS",
+    "BCA DIS": "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS",
+    "BCA": "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS",
+    "BCA DS TEL": "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE",
+    "BCA DS HIN": "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE",
+    "BCA DS DIS": "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE",
+    "BCA DS": "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE",
+    "BFSI TEL": "STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI",
+    "BFSI HIN": "STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI",
+    "BFSI": "STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI",
+}
+
+def resolve_header_title(sheet_name, custom_title=None, group_name=None):
+    if custom_title and custom_title.strip() and custom_title.strip().upper() != "AUTO":
+        return custom_title.strip()
+    
+    s = (sheet_name or "").strip().upper()
+    g = (str(group_name) if group_name is not None else "").strip().upper()
+
+    for k, v in SHEET_TO_HEADER_TITLE.items():
+        if k.upper() == s:
+            return v
+    
+    if "BBA DM" in s: return "STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING"
+    elif "BBA BA" in s: return "STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS"
+    elif s.startswith("BBA"): return "STATEMENT OF GRADES FOR BBA (HONOURS)"
+    elif "BCA DS" in s: return "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE"
+    elif s.startswith("BCA"): return "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS"
+    elif "BFSI" in s: return "STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI"
+    elif s.startswith("BCOM"): return "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS"
+    elif s.startswith("CS") or "COMPUTER" in s: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE"
+    elif s.startswith("DS") or "DATA" in s: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE"
+    elif s.startswith("MB") or "MICRO" in s: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY"
+    elif s.startswith("FISH"): return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - FISHERIES"
+    elif s.startswith("ANIM"): return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ANIMATION"
+    elif s.startswith("AI") or "ARTIFICIAL" in s: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - ARTIFICIAL INTELLIGENCE"
+    elif s.startswith("CHEM"): return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - CHEMISTRY"
+
+    if "BBA DM" in g: return "STATEMENT OF GRADES FOR BBA (HONOURS) - DIGITAL MARKETING"
+    elif "BBA BA" in g: return "STATEMENT OF GRADES FOR BBA (HONOURS) - BUSINESS ANALYTICS"
+    elif g.startswith("BBA"): return "STATEMENT OF GRADES FOR BBA (HONOURS)"
+    elif "BCA DS" in g: return "STATEMENT OF GRADES FOR BCA (HONOURS) - DATA SCIENCE"
+    elif g.startswith("BCA"): return "STATEMENT OF GRADES FOR BCA (HONOURS) - COMPUTER APPLICATIONS"
+    elif "BFSI" in g: return "STATEMENT OF GRADES FOR B.COM (HONOURS) - BFSI"
+    elif "BCOM" in g: return "STATEMENT OF GRADES FOR B.COM (HONOURS) - COMPUTER APPLICATIONS"
+    elif "CS" in g: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE"
+    elif "DS" in g: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - DATA SCIENCE"
+    elif "MB" in g: return "STATEMENT OF GRADES FOR B.Sc (HONOURS) - MICROBIOLOGY"
+
+    return f"STATEMENT OF GRADES FOR {sheet_name.strip()}"
+
+
 def create_pristine_background_template(original_pdf_path, output_clean_path="pristine_background.pdf"):
     """
-    Strips only the dynamic text rendering BT...ET blocks from the master PDF content stream.
+    Strips only the dynamic text rendering BT...ET blocks and the old signature
+    from the master PDF content stream.
     Preserves 100% of background watermarks, logos, borders, fonts, and table lines.
     Zero white rectangles drawn!
     """
@@ -36,11 +150,12 @@ def create_pristine_background_template(original_pdf_path, output_clean_path="pr
     contents_obj = page["/Contents"].get_object()
 
     def clean_stream_bytes(data_bytes):
-        pattern = re.compile(b'BT[\\s\\S]*?ET')
+        # 1. Dynamic text removal
+        pattern = re.compile(rb'BT[\s\S]*?ET')
         bt_matches = list(pattern.finditer(data_bytes))
         if len(bt_matches) == 39:
-            # The exact 21 dynamic sample data text block indices to remove
-            dynamic_indices = {1, 5, 6, 8, 11, 16, 18, 21, 22, 23, 24, 25, 27, 29, 32, 33, 34, 35, 36, 37, 38}
+            # The exact dynamic sample data text block indices to remove (including 9 and 10 for header titles)
+            dynamic_indices = {1, 5, 6, 8, 9, 10, 11, 16, 18, 21, 22, 23, 24, 25, 27, 29, 32, 33, 34, 35, 36, 37, 38}
             new_b = bytearray()
             last_end = 0
             for i, m in enumerate(bt_matches):
@@ -50,7 +165,15 @@ def create_pristine_background_template(original_pdf_path, output_clean_path="pr
                     new_b.extend(data_bytes[start:end])
                 last_end = end
             new_b.extend(data_bytes[last_end:])
-            return bytes(new_b)
+            data_bytes = bytes(new_b)
+
+        # 2. Old signature removal (/Image11 Do and its clipping block)
+        sig_pattern = re.compile(rb'q\r?\n550\.400024[\s\S]*?/Image11 Do\r?\nQ\r?\nQ')
+        if sig_pattern.search(data_bytes):
+            data_bytes = sig_pattern.sub(b'', data_bytes)
+        elif b'/Image11 Do' in data_bytes:
+            data_bytes = data_bytes.replace(b'/Image11 Do', b'')
+
         return data_bytes
 
     if isinstance(contents_obj, pypdf.generic.ArrayObject):
@@ -69,6 +192,59 @@ def create_pristine_background_template(original_pdf_path, output_clean_path="pr
         writer.write(f)
 
     return output_clean_path
+
+def fetch_campus_signature(campus_id, cache_dir=None):
+    """
+    Fetches principal signature for campus_id from:
+    https://analysis.aditya.ac.in/uploads/principal_signature/{campus_id}_1.jpg
+    Converts white background to transparent and caches as PNG.
+    """
+    if not cache_dir:
+        cache_dir = os.path.join(os.getcwd(), "static", "uploads", "signatures")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    cid_clean = str(campus_id).strip()
+    if cid_clean.endswith(".0"):
+        cid_clean = cid_clean[:-2]
+    if not cid_clean:
+        cid_clean = "44"  # Default campus ID if empty
+        
+    target_png = os.path.join(cache_dir, f"campus_{cid_clean}_sig.png")
+    if os.path.exists(target_png):
+        return target_png
+
+    url = f"https://analysis.aditya.ac.in/uploads/principal_signature/{cid_clean}_1.jpg"
+    temp_jpg = os.path.join(cache_dir, f"temp_{cid_clean}.jpg")
+
+    try:
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            jpg_bytes = resp.read()
+            with open(temp_jpg, "wb") as f:
+                f.write(jpg_bytes)
+
+        im = Image.open(temp_jpg).convert("RGBA")
+        arr = np.array(im)
+        # Mask near-white pixels (paper background)
+        white_mask = (arr[:, :, 0] > 195) & (arr[:, :, 1] > 195) & (arr[:, :, 2] > 195)
+        arr[white_mask, 3] = 0
+        clean_im = Image.fromarray(arr)
+        clean_im.save(target_png, "PNG")
+
+        try:
+            if os.path.exists(temp_jpg):
+                os.remove(temp_jpg)
+        except Exception:
+            pass
+
+        return target_png
+    except Exception as e:
+        print(f"Warning: Could not fetch signature from {url}: {e}")
+        return None
+
 
 def ensure_default_signatures(signatures_dir="signatures"):
     os.makedirs(signatures_dir, exist_ok=True)
@@ -128,7 +304,9 @@ def generate_single_pdf(
     subjects_info,
     output_path,
     signature_path,
-    issue_date
+    issue_date,
+    header_line_1="STATEMENT OF GRADES FOR B.Sc (HONOURS) - COMPUTER SCIENCE",
+    header_line_2="DEGREE EXAMINATIONS AT THE END OF FIRST SEMESTER - JANUARY - 2026"
 ):
     reader = pypdf.PdfReader(pristine_template_path)
     template_page = reader.pages[0]
@@ -143,6 +321,17 @@ def generate_single_pdf(
     
     # Zero white boxes drawn! Text sits directly over background watermarks & table grids.
     can.setFillColor(colors.black)
+
+    # 0. Degree Programme & Examination Header Titles (Centered)
+    if header_line_1:
+        h1_str = str(header_line_1).strip()
+        can.setFont("Helvetica-Bold", 10.2 if len(h1_str) > 65 else 11.5)
+        can.drawCentredString(page_width / 2.0, ry(176.88), h1_str)
+
+    if header_line_2:
+        h2_str = str(header_line_2).strip()
+        can.setFont("Helvetica-Bold", 10.2 if len(h2_str) > 68 else 11.5)
+        can.drawCentredString(page_width / 2.0, ry(195.24), h2_str)
 
     # 1. Serial Number
     serial_no = student_record.get("Serial No:") or student_record.get("SERIAL NO") or student_record.get("SUC NUMBER") or "250070"
@@ -225,12 +414,12 @@ def generate_single_pdf(
     can.setFont("Helvetica-Bold", 14.8)
     can.drawString(111.12, ry(578.76), sgpa_str)
 
-    # 8. Controller Signature PNG
+    # 8. Controller / Principal Signature PNG
     if signature_path and os.path.exists(signature_path):
         can.drawImage(
             signature_path,
-            380, ry(720),
-            width=130, height=45,
+            410, ry(718),
+            width=95, height=42,
             mask='auto',
             preserveAspectRatio=True
         )
@@ -259,11 +448,19 @@ def process_excel_and_generate_all(
     fixed_date="06.04.2026",
     start_date="2026-04-01",
     end_date="2026-04-15",
+    default_campus_id="31",
+    header_title="AUTO",
+    semester="FIRST SEMESTER",
+    exam_month="JANUARY",
+    exam_year="2026",
     progress_callback=None
 ):
+    sig_cache_dir = signature_folder if signature_folder else os.path.join(os.getcwd(), "static", "uploads", "signatures")
+    default_sig_path = fetch_campus_signature(default_campus_id, cache_dir=sig_cache_dir)
+
     signatures = [os.path.join(signature_folder, f) for f in os.listdir(signature_folder)
-                  if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(signature_folder) else []
-    if not signatures:
+                  if f.lower().endswith(('.png', '.jpg', '.jpeg')) and not f.startswith("temp_")] if (signature_folder and os.path.exists(signature_folder)) else []
+    if not signatures and not default_sig_path:
         signatures = ensure_default_signatures("signatures")
 
     # Generate pristine clean background template without dynamic text
@@ -353,7 +550,24 @@ def process_excel_and_generate_all(
         else:
             cur_date = format_display_date(fixed_date or "06.04.2026")
 
-        sig_path = random.choice(signatures)
+        # Determine student campus ID
+        student_cid = str(default_campus_id).strip()
+        for col_name in srow.keys():
+            col_upper = str(col_name).upper().strip()
+            if col_upper in ["CAMPUS ID", "CAMPUS_ID", "CAMPUS", "CAMPUS CODE", "COLLEGE CODE"]:
+                if pd.notna(srow[col_name]):
+                    cval = str(srow[col_name]).strip()
+                    if cval.endswith(".0"):
+                        cval = cval[:-2]
+                    if cval:
+                        student_cid = cval
+                        break
+        
+        if student_cid == str(default_campus_id).strip() and default_sig_path:
+            sig_path = default_sig_path
+        else:
+            sig_path = fetch_campus_signature(student_cid, cache_dir=sig_cache_dir)
+
 
         st_subs = []
         for sub in subjects_info:
@@ -367,6 +581,13 @@ def process_excel_and_generate_all(
         sheet_dir = os.path.join(output_base_dir, sheet_name)
         out_pdf_path = os.path.join(sheet_dir, f"{ht_val}.pdf")
 
+        # Determine dynamic Header Lines
+        h1 = resolve_header_title(sheet_name, custom_title=header_title, group_name=srow.get("GROUP"))
+        sem_clean = semester.strip() if semester else "FIRST SEMESTER"
+        month_clean = exam_month.strip() if exam_month else "JANUARY"
+        year_clean = str(exam_year).strip() if exam_year else "2026"
+        h2 = f"DEGREE EXAMINATIONS AT THE END OF {sem_clean} - {month_clean} - {year_clean}"
+
         try:
             generate_single_pdf(
                 pristine_template_path=clean_template_path,
@@ -374,7 +595,9 @@ def process_excel_and_generate_all(
                 subjects_info=st_subs,
                 output_path=out_pdf_path,
                 signature_path=sig_path,
-                issue_date=cur_date
+                issue_date=cur_date,
+                header_line_1=h1,
+                header_line_2=h2
             )
             generated_count += 1
             generated_files.append(out_pdf_path)
