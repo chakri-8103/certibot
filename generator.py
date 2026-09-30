@@ -528,20 +528,13 @@ def generate_single_pdf(
     overlay_pdf = pypdf.PdfReader(packet)
     writer = pypdf.PdfWriter()
     merged_page = reader.pages[0]
-    if output_path is None:
-        out_buf = io.BytesIO()
-        writer.write(out_buf)
-        out_buf.seek(0)
-        return out_buf.getvalue()
-    elif isinstance(output_path, (io.BytesIO, io.RawIOBase, io.BufferedIOBase)):
-        writer.write(output_path)
-        return output_path
-    else:
-        clean_out_path = os.path.abspath(output_path)
-        os.makedirs(os.path.dirname(clean_out_path), exist_ok=True)
-        with open(clean_out_path, "wb") as f:
-            writer.write(f)
-        return clean_out_path
+    merged_page.merge_page(overlay_pdf.pages[0])
+    writer.add_page(merged_page)
+
+    clean_out_path = os.path.abspath(output_path)
+    os.makedirs(os.path.dirname(clean_out_path), exist_ok=True)
+    with open(clean_out_path, "wb") as f:
+        writer.write(f)
 
 def process_excel_and_generate_all(
     template_path,
@@ -568,25 +561,22 @@ def process_excel_and_generate_all(
     if not signatures and not default_sig_path:
         signatures = ensure_default_signatures("signatures")
 
-    # Clean previous output directory so only output.zip will exist
+    # Clean previous output directory so each run only contains the current sheet's generated PDFs
     if os.path.exists(output_base_dir):
         for item in os.listdir(output_base_dir):
             item_path = os.path.join(output_base_dir, item)
             try:
                 if os.path.isdir(item_path):
                     shutil.rmtree(item_path)
-                elif os.path.isfile(item_path):
+                elif os.path.isfile(item_path) and item != "pristine_background.pdf":
                     os.remove(item_path)
             except Exception:
                 pass
 
+    # Generate pristine clean background template without dynamic text
+    clean_template_path = os.path.join(output_base_dir, "pristine_background.pdf")
     os.makedirs(output_base_dir, exist_ok=True)
-
-    # Use master pristine_template.pdf directly without creating extra background files
-    clean_template_path = os.path.join(os.getcwd(), "pristine_template.pdf")
-    if not os.path.exists(clean_template_path):
-        clean_template_path = os.path.join(output_base_dir, "pristine_background.pdf")
-        create_pristine_background_template(template_path, clean_template_path)
+    create_pristine_background_template(template_path, clean_template_path)
 
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     all_sheets = wb.sheetnames
@@ -605,6 +595,7 @@ def process_excel_and_generate_all(
     total_students = 0
     generated_count = 0
     failed_count = 0
+    generated_files = []
 
     student_jobs = []
     for sheet_name in sheets_to_process:
@@ -662,87 +653,90 @@ def process_excel_and_generate_all(
     if progress_callback:
         progress_callback(0, total_students, 0, 0, "Starting generation...")
 
-    zip_path = os.path.join(output_base_dir, "output.zip")
+    for i, job in enumerate(student_jobs, 1):
+        sheet_name = job["sheet_name"]
+        ht_val = job["hall_ticket"]
+        srow = job["record"]
+        subjects_info = job["subjects_info"]
 
-    # Generate directly into output.zip in memory — NO individual PDF files stored on disk!
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for i, job in enumerate(student_jobs, 1):
-            sheet_name = job["sheet_name"]
-            ht_val = job["hall_ticket"]
-            srow = job["record"]
-            subjects_info = job["subjects_info"]
+        if date_mode == "random":
+            cur_date = get_random_date_between(start_date, end_date)
+        else:
+            cur_date = format_display_date(fixed_date or "06.04.2026")
 
-            if date_mode == "random":
-                cur_date = get_random_date_between(start_date, end_date)
-            else:
-                cur_date = format_display_date(fixed_date or "06.04.2026")
+        # Determine student campus ID
+        student_cid = str(default_campus_id).strip()
+        for col_name in srow.keys():
+            col_upper = str(col_name).upper().strip()
+            if col_upper in ["CAMPUS ID", "CAMPUS_ID", "CAMPUS", "CAMPUS CODE", "COLLEGE CODE"]:
+                if pd.notna(srow[col_name]):
+                    cval = str(srow[col_name]).strip()
+                    if cval.endswith(".0"):
+                        cval = cval[:-2]
+                    if cval:
+                        student_cid = cval
+                        break
+        
+        if student_cid == str(default_campus_id).strip() and default_sig_path:
+            sig_path = default_sig_path
+        else:
+            sig_path = fetch_campus_signature(student_cid, cache_dir=sig_cache_dir)
 
-            # Determine student campus ID
-            student_cid = str(default_campus_id).strip()
-            for col_name in srow.keys():
-                col_upper = str(col_name).upper().strip()
-                if col_upper in ["CAMPUS ID", "CAMPUS_ID", "CAMPUS", "CAMPUS CODE", "COLLEGE CODE"]:
-                    if pd.notna(srow[col_name]):
-                        cval = str(srow[col_name]).strip()
-                        if cval.endswith(".0"):
-                            cval = cval[:-2]
-                        if cval:
-                            student_cid = cval
-                            break
-            
-            if student_cid == str(default_campus_id).strip() and default_sig_path:
-                sig_path = default_sig_path
-            else:
-                sig_path = fetch_campus_signature(student_cid, cache_dir=sig_cache_dir)
 
-            st_subs = []
-            for sub in subjects_info:
-                gr = srow.get(sub["col_key"], "FAIL")
-                st_subs.append({
-                    "display_name": sub["display_name"],
-                    "credits": sub["credits"],
-                    "grade": gr if pd.notna(gr) else "FAIL"
-                })
+        st_subs = []
+        for sub in subjects_info:
+            gr = srow.get(sub["col_key"], "FAIL")
+            st_subs.append({
+                "display_name": sub["display_name"],
+                "credits": sub["credits"],
+                "grade": gr if pd.notna(gr) else "FAIL"
+            })
 
-            # Determine dynamic Header Lines
-            h1 = resolve_header_title(sheet_name, custom_title=header_title, group_name=srow.get("GROUP"))
-            sem_clean = semester.strip() if semester else "FIRST SEMESTER"
-            month_clean = exam_month.strip() if exam_month else "JANUARY"
-            year_clean = str(exam_year).strip() if exam_year else "2026"
-            h2 = f"DEGREE EXAMINATIONS AT THE END OF {sem_clean} - {month_clean} - {year_clean}"
+        sheet_dir = os.path.join(output_base_dir, sheet_name)
+        out_pdf_path = os.path.join(sheet_dir, f"{ht_val}.pdf")
 
-            try:
-                pdf_bytes = generate_single_pdf(
-                    pristine_template_path=clean_template_path,
-                    student_record=srow,
-                    subjects_info=st_subs,
-                    output_path=None,  # Generated in memory, zero files on disk!
-                    signature_path=sig_path,
-                    issue_date=cur_date,
-                    header_line_1=h1,
-                    header_line_2=h2
-                )
-                zipf.writestr(f"{sheet_name}/{ht_val}.pdf", pdf_bytes)
-                generated_count += 1
-            except Exception as e:
-                failed_count += 1
-                print(f"Error generating PDF for {ht_val} in '{sheet_name}': {e}")
+        # Determine dynamic Header Lines
+        h1 = resolve_header_title(sheet_name, custom_title=header_title, group_name=srow.get("GROUP"))
+        sem_clean = semester.strip() if semester else "FIRST SEMESTER"
+        month_clean = exam_month.strip() if exam_month else "JANUARY"
+        year_clean = str(exam_year).strip() if exam_year else "2026"
+        h2 = f"DEGREE EXAMINATIONS AT THE END OF {sem_clean} - {month_clean} - {year_clean}"
 
-            if progress_callback:
-                progress_callback(i, total_students, generated_count, failed_count, f"Processing {sheet_name}: {ht_val}.pdf")
-
-    # Clean up pristine_background.pdf if it was temporarily generated
-    temp_bg = os.path.join(output_base_dir, "pristine_background.pdf")
-    if os.path.exists(temp_bg):
         try:
-            os.remove(temp_bg)
-        except Exception:
-            pass
+            generate_single_pdf(
+                pristine_template_path=clean_template_path,
+                student_record=srow,
+                subjects_info=st_subs,
+                output_path=out_pdf_path,
+                signature_path=sig_path,
+                issue_date=cur_date,
+                header_line_1=h1,
+                header_line_2=h2
+            )
+            generated_count += 1
+            generated_files.append(out_pdf_path)
+        except Exception as e:
+            failed_count += 1
+            print(f"Error generating PDF for {ht_val} in '{sheet_name}': {e}")
+
+        if progress_callback:
+            progress_callback(i, total_students, generated_count, failed_count, f"Processing {sheet_name}: {ht_val}.pdf")
+
+    # Automatically create output.zip
+    zip_path = os.path.join(output_base_dir, "output.zip")
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(output_base_dir):
+            for file in files:
+                if file in ["output.zip", "pristine_background.pdf"]:
+                    continue
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, output_base_dir)
+                zipf.write(file_path, arcname)
 
     return {
         "total": total_students,
         "generated": generated_count,
         "failed": failed_count,
         "zip_path": zip_path,
-        "sample_pdf": None
+        "sample_pdf": generated_files[0] if generated_files else None
     }

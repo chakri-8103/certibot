@@ -1,5 +1,4 @@
 import os
-import io
 import shutil
 import openpyxl
 import pandas as pd
@@ -148,7 +147,16 @@ def generate():
             progress_callback=update_progress
         )
 
+        # Generate sample preview image
         preview_rel_url = None
+        if res["sample_pdf"] and os.path.exists(res["sample_pdf"]):
+            try:
+                pdf = pdfium.PdfDocument(res["sample_pdf"])
+                preview_img_path = os.path.join(os.getcwd(), 'static', 'preview_sample.png')
+                pdf[0].render(scale=2.0).to_pil().save(preview_img_path)
+                preview_rel_url = '/static/preview_sample.png'
+            except Exception as pe:
+                print("Preview render error:", pe)
 
         generation_status = {
             "status": "completed",
@@ -179,38 +187,9 @@ def get_status():
 @app.route('/download/zip')
 def download_zip():
     zip_path = os.path.join(app.config['GENERATED_FOLDER'], 'output.zip')
-    if not os.path.exists(zip_path):
-        return "ZIP file not generated yet.", 404
-
-    # Read zip file completely into memory
-    with open(zip_path, 'rb') as f:
-        zip_data = io.BytesIO(f.read())
-
-    # Immediately delete all generated files from the folder
-    try:
-        shutil.rmtree(app.config['GENERATED_FOLDER'], ignore_errors=True)
-        os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
-    except Exception as e:
-        print("Generated files cleanup error:", e)
-
-    # Clean temporary uploaded Excel files so nothing remains stored
-    try:
-        excel_tmp = os.path.join(app.config['UPLOAD_FOLDER'], 'uploaded_excel.xlsx')
-        if os.path.exists(excel_tmp):
-            os.remove(excel_tmp)
-        excel_data = os.path.join(app.config['UPLOAD_FOLDER'], 'data.xlsx')
-        if os.path.exists(excel_data):
-            os.remove(excel_data)
-    except Exception as e:
-        print("Upload cleanup error:", e)
-
-    zip_data.seek(0)
-    return send_file(
-        zip_data,
-        mimetype='application/zip',
-        as_attachment=True,
-        download_name='output.zip'
-    )
+    if os.path.exists(zip_path):
+        return send_file(zip_path, as_attachment=True, download_name='output.zip')
+    return "ZIP file not generated yet.", 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
