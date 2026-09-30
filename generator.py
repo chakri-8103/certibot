@@ -13,6 +13,33 @@ import pypdf
 from PIL import Image, ImageDraw
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register Book Antiqua font with multiple search paths
+FONT_REGULAR = "Helvetica"
+FONT_BOLD = "Helvetica-Bold"
+
+def init_fonts():
+    global FONT_REGULAR, FONT_BOLD
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        (os.path.join(base_dir, "fonts", "BKANT.TTF"), os.path.join(base_dir, "fonts", "ANTQUAB.TTF")),
+        ("C:/Windows/Fonts/BKANT.TTF", "C:/Windows/Fonts/ANTQUAB.TTF"),
+        (os.path.join(base_dir, "BKANT.TTF"), os.path.join(base_dir, "ANTQUAB.TTF"))
+    ]
+    for reg, bld in candidates:
+        if os.path.exists(reg) and os.path.exists(bld):
+            try:
+                pdfmetrics.registerFont(TTFont("BookAntiqua", reg))
+                pdfmetrics.registerFont(TTFont("BookAntiqua-Bold", bld))
+                FONT_REGULAR = "BookAntiqua"
+                FONT_BOLD = "BookAntiqua-Bold"
+                break
+            except Exception as e:
+                print("Font registration error:", e)
+
+init_fonts()
 
 # Grade Points Mapping
 GRADE_POINTS = {
@@ -23,7 +50,8 @@ GRADE_POINTS = {
     "B": 6, "6": 6,
     "C": 5, "5": 5,
     "D": 4, "P": 4, "4": 4,
-    "F": 0, "FAIL": 0, "AB": 0, "ABSENT": 0, "0": 0
+    "F": 0, "FAIL": 0, "AB": 0, "ABSENT": 0, "ABS": 0, "0": 0,
+    "NR": 0, "SMP": 0
 }
 
 # 14 Official Programme Header Titles
@@ -325,12 +353,12 @@ def generate_single_pdf(
     # 0. Degree Programme & Examination Header Titles (Centered)
     if header_line_1:
         h1_str = str(header_line_1).strip()
-        can.setFont("Helvetica-Bold", 10.2 if len(h1_str) > 65 else 11.5)
+        can.setFont(FONT_BOLD, 10.2 if len(h1_str) > 65 else 11.5)
         can.drawCentredString(page_width / 2.0, ry(176.88), h1_str)
 
     if header_line_2:
         h2_str = str(header_line_2).strip()
-        can.setFont("Helvetica-Bold", 10.2 if len(h2_str) > 68 else 11.5)
+        can.setFont(FONT_BOLD, 10.2 if len(h2_str) > 68 else 11.5)
         can.drawCentredString(page_width / 2.0, ry(195.24), h2_str)
 
     # 1. Serial Number
@@ -338,7 +366,7 @@ def generate_single_pdf(
     serial_no_str = str(serial_no).strip()
     if serial_no_str.endswith(".0"):
         serial_no_str = serial_no_str[:-2]
-    can.setFont("Helvetica-Bold", 14.8)
+    can.setFont(FONT_BOLD, 14.5)
     can.drawString(510.84, ry(69.48), serial_no_str)
 
     # 2. Register Number (Hall Ticket)
@@ -346,16 +374,51 @@ def generate_single_pdf(
     hall_ticket_str = str(hall_ticket).strip()
     if hall_ticket_str.endswith(".0"):
         hall_ticket_str = hall_ticket_str[:-2]
-    can.setFont("Helvetica-Bold", 15.6)
+    can.setFont(FONT_BOLD, 15.0)
     can.drawString(455.28, ry(218.64), hall_ticket_str)
 
-    # 3. Student Name
+    # 3. Student Name (All in one line via auto-scaling; greedy wrap if extraordinarily long)
     student_name = str(student_record.get("STUDENT NAME", "")).strip().upper()
-    can.setFont("Helvetica-Bold", 11.5)
-    can.drawString(230.04, ry(240.96), student_name)
+    max_name_w = 320.0  # Right margin boundary before table edge at 553.5 pt
+
+    # Try single line first by scaling down font size
+    sz = 11.5
+    while can.stringWidth(student_name, FONT_BOLD, sz) > max_name_w and sz > 7.6:
+        sz -= 0.1
+    sz = round(sz, 1)
+
+    if can.stringWidth(student_name, FONT_BOLD, sz) <= max_name_w:
+        # All name in ONE line cleanly
+        can.setFont(FONT_BOLD, sz)
+        can.drawString(230.04, ry(240.96), student_name)
+    else:
+        # Extraordinarily long name: greedy wrap so Line 1 fills up completely and remaining words go to Line 2
+        words = student_name.split()
+        wrap_sz = 9.0
+        l1_words, l2_words = [], []
+        for w in words:
+            test_l1 = " ".join(l1_words + [w])
+            if can.stringWidth(test_l1, FONT_BOLD, wrap_sz) <= max_name_w:
+                l1_words.append(w)
+            else:
+                l2_words.append(w)
+
+        l1 = " ".join(l1_words)
+        l2 = " ".join(l2_words)
+
+        while (can.stringWidth(l1, FONT_BOLD, wrap_sz) > max_name_w or (l2 and can.stringWidth(l2, FONT_BOLD, wrap_sz) > max_name_w)) and wrap_sz > 7.0:
+            wrap_sz -= 0.2
+        wrap_sz = round(wrap_sz, 1)
+
+        can.setFont(FONT_BOLD, wrap_sz)
+        if l2:
+            can.drawString(230.04, ry(235.50), l1)
+            can.drawString(230.04, ry(248.50), l2)
+        else:
+            can.drawString(230.04, ry(240.96), l1)
 
     # 4. Date
-    can.setFont("Helvetica", 10.7)
+    can.setFont(FONT_REGULAR, 10.7)
     can.drawString(33.72, ry(771.24), f"DATE : {issue_date}")
 
     # 5. Table Rows
@@ -363,15 +426,50 @@ def generate_single_pdf(
     total_points = 0
     has_fail = False
 
-    row_y_starts = [336.60, 369.12, 401.76, 434.28, 466.80, 499.32, 531.84]
+    num_subs = len(subjects_info)
+
+    # Uniform font size for ALL subjects in this marksheet
+    # Base size according to subject count
+    if num_subs <= 7:
+        base_sub_size = 9.5
+        table_num_size = 10.5
+    elif num_subs == 8:
+        base_sub_size = 8.8
+        table_num_size = 9.8
+    elif num_subs == 9:
+        base_sub_size = 8.2
+        table_num_size = 9.2
+    else:  # 10 or more subjects
+        base_sub_size = 7.6
+        table_num_size = 8.5
+
+    # Check if ANY subject name is too long to fit in the column (width ~ 320 pt)
+    # If any subject overflows, scale down the uniform font size for ALL subjects
+    max_col_w = 320.0
+    for sub in subjects_info:
+        s_title = str(sub.get("display_name", "")).strip()
+        while can.stringWidth(s_title, FONT_REGULAR, base_sub_size) > max_col_w and base_sub_size > 6.0:
+            base_sub_size -= 0.2
+
+    uniform_sub_size = round(base_sub_size, 1)
+
+    # Row vertical positioning
+    # Standard 7 rows: [336.60, 369.12, 401.76, 434.28, 466.80, 499.32, 531.84]
+    standard_y = [336.60, 369.12, 401.76, 434.28, 466.80, 499.32, 531.84]
+    if num_subs <= 7:
+        row_y_starts = standard_y[:num_subs]
+    else:
+        # Distribute rows evenly between 336.60 and 538.00 (just above TOTAL line at 553.5)
+        step = (538.00 - 336.60) / max(num_subs - 1, 1)
+        row_y_starts = [336.60 + (i * step) for i in range(num_subs)]
 
     for i, sub in enumerate(subjects_info):
-        sname = sub["display_name"]
+        sname = str(sub["display_name"]).strip()
         cred = sub["credits"]
         gr = str(sub["grade"]).strip().upper()
 
         gp = GRADE_POINTS.get(gr, 0)
-        if gr in ["FAIL", "F", "AB", "ABSENT"]:
+        if gr in ["FAIL", "F", "AB", "ABSENT", "ABS", "NR", "SMP"]:
             has_fail = True
             gp = 0
 
@@ -381,12 +479,12 @@ def generate_single_pdf(
 
         y_top = row_y_starts[i] if i < len(row_y_starts) else 336.60 + (i * 32.5)
 
-        can.setFont("Helvetica", 9.8)
-        if len(sname) > 46:
-            can.setFont("Helvetica", 8.0)
+        # All subjects use the EXACT SAME uniform font size
+        can.setFont(FONT_REGULAR, uniform_sub_size)
         can.drawString(33.60, ry(y_top), sname)
 
-        can.setFont("Helvetica", 10.7)
+        # Table numbers & Grade in Book Antiqua
+        can.setFont(FONT_REGULAR, table_num_size)
         can.drawString(371.52, ry(y_top), str(cred))
         can.drawString(420.00, ry(y_top), gr)
         can.drawString(475.00, ry(y_top), str(gp))
@@ -406,12 +504,12 @@ def generate_single_pdf(
         else:
             sgpa_str = f"{(total_points / total_credits):.2f}"
 
-    can.setFont("Helvetica-Bold", 14.8)
+    can.setFont(FONT_BOLD, 14.5)
     can.drawString(366.72, ry(559.44), str(total_credits))
     can.drawString(510.00, ry(559.44), str(total_points))
 
     # 7. SGPA
-    can.setFont("Helvetica-Bold", 14.8)
+    can.setFont(FONT_BOLD, 14.5)
     can.drawString(111.12, ry(578.76), sgpa_str)
 
     # 8. Controller / Principal Signature PNG
@@ -463,6 +561,18 @@ def process_excel_and_generate_all(
     if not signatures and not default_sig_path:
         signatures = ensure_default_signatures("signatures")
 
+    # Clean previous output directory so each run only contains the current sheet's generated PDFs
+    if os.path.exists(output_base_dir):
+        for item in os.listdir(output_base_dir):
+            item_path = os.path.join(output_base_dir, item)
+            try:
+                if os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+                elif os.path.isfile(item_path) and item != "pristine_background.pdf":
+                    os.remove(item_path)
+            except Exception:
+                pass
+
     # Generate pristine clean background template without dynamic text
     clean_template_path = os.path.join(output_base_dir, "pristine_background.pdf")
     os.makedirs(output_base_dir, exist_ok=True)
@@ -476,7 +586,11 @@ def process_excel_and_generate_all(
             selected_sheets = [selected_sheets]
         sheets_to_process = [s for s in all_sheets if s in selected_sheets or s.strip() in [sel.strip() for sel in selected_sheets]]
     else:
-        sheets_to_process = all_sheets
+        # Default to first sheet (Single sheet generation only)
+        sheets_to_process = [all_sheets[0]] if all_sheets else []
+
+    if not sheets_to_process:
+        raise ValueError("Selected sheet was not found in the uploaded Excel file.")
 
     total_students = 0
     generated_count = 0

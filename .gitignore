@@ -9,10 +9,17 @@ venv/
 ENV/
 env/
 
-# Large output files & generated zips
+# Large output files & generated PDFs
 *.zip
 output.zip
-generated_pdfs/*.zip
+generated_pdfs/
+test_*.pdf
+test_*.png
+table_area_check.png
+
+# Uploaded test cache
+static/uploads/*.xlsx
+static/uploads/*.xls
 
 # OS artifacts
 .DS_Store

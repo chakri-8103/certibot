@@ -107,8 +107,10 @@ def generate():
 
     sig_folder = app.config['SIGNATURE_FOLDER']
 
-    selected_sheet = request.form.get('sheet', 'ALL')
-    sheets_param = None if selected_sheet == 'ALL' else [selected_sheet]
+    selected_sheet = request.form.get('sheet', '').strip()
+    if not selected_sheet or selected_sheet.upper() == 'ALL':
+        return jsonify({'error': 'Please select a specific sheet. Batch generation of all sheets is disabled — only one sheet can be generated at a time.'}), 400
+    sheets_param = [selected_sheet]
 
     # Header parameters
     header_title = request.form.get('header_title', 'AUTO').strip() or 'AUTO'

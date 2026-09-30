@@ -196,12 +196,12 @@
                         <!-- 2. Sheet Selector -->
                         <div class="mb-3">
                             <label class="form-label" for="sheetSelect">
-                                <i class="fa-solid fa-layer-group text-primary me-2"></i> 2. Select Target Sheet(s)
+                                <i class="fa-solid fa-layer-group text-primary me-2"></i> 2. Select Target Sheet (Single Sheet Only) <span class="text-danger">*</span>
                             </label>
-                            <select class="form-select" name="sheet" id="sheetSelect">
-                                <option value="ALL" data-title="AUTO">All Sheets (Upload Excel to load sheets & auto-map headers)</option>
+                            <select class="form-select" name="sheet" id="sheetSelect" required>
+                                <option value="" disabled selected>-- Upload Excel to choose sheet --</option>
                             </select>
-                            <div class="form-text">Selecting a specific sheet will automatically select its course title below.</div>
+                            <div class="form-text"><i class="fa-solid fa-circle-check text-success me-1"></i> Generates certificates for <strong>one sheet at a time</strong>. Selecting a sheet auto-fills Header Line 1.</div>
                         </div>
 
                         <!-- 3. Header Line 1 (Course Title) -->
@@ -324,7 +324,7 @@
                         <!-- Generate Button -->
                         <div class="d-grid">
                             <button type="submit" class="btn btn-generate btn-lg" id="generateBtn">
-                                <i class="fa-solid fa-bolt me-2"></i> GENERATE GRADE SHEETS
+                                <i class="fa-solid fa-bolt me-2"></i> GENERATE GRADE SHEETS (SELECTED SHEET)
                             </button>
                         </div>
                     </form>
@@ -419,9 +419,7 @@
         if (sheetSelect && headerTitleInput) {
             sheetSelect.addEventListener('change', function() {
                 const selectedOpt = this.options[this.selectedIndex];
-                if (this.value === 'ALL') {
-                    headerTitleInput.value = 'AUTO';
-                } else if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.title) {
+                if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.title) {
                     headerTitleInput.value = selectedOpt.dataset.title;
                 }
             });
@@ -494,14 +492,14 @@
             const helpText = document.getElementById('excelHelpText');
             
             if (!file) {
-                select.innerHTML = '<option value="ALL" data-title="AUTO">All Sheets (Upload Excel to load sheets & auto-map headers)</option>';
+                select.innerHTML = '<option value="" disabled selected>-- Upload Excel to choose sheet --</option>';
                 if (helpText) {
                     helpText.innerHTML = '<i class="fa-solid fa-circle-info me-1"></i> Upload your student Excel file (.xlsx, .xls) to auto-detect sheets.';
                 }
                 return;
             }
 
-            select.innerHTML = '<option value="ALL" data-title="AUTO">Loading sheets from ' + file.name + '...</option>';
+            select.innerHTML = '<option value="" disabled selected>Loading sheets from ' + file.name + '...</option>';
             if (helpText) {
                 helpText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Reading sheets from <strong>' + file.name + '</strong>...';
             }
@@ -513,8 +511,8 @@
                 method: 'POST',
                 body: formData
             }).then(res => res.json()).then(data => {
+                select.innerHTML = '';
                 if (data.sheets_info && data.sheets_info.length > 0) {
-                    select.innerHTML = '<option value="ALL" data-title="AUTO">All Sheets (' + data.sheets_info.length + ' sheets detected - Auto-map headers)</option>';
                     data.sheets_info.forEach(s => {
                         const opt = document.createElement('option');
                         opt.value = s.name;
@@ -522,28 +520,33 @@
                         opt.textContent = s.name + ' — ' + s.header_title;
                         select.appendChild(opt);
                     });
+                    // Auto-select first sheet & set header title
+                    select.selectedIndex = 0;
+                    if (headerTitleInput && data.sheets_info[0].header_title) {
+                        headerTitleInput.value = data.sheets_info[0].header_title;
+                    }
                     if (helpText) {
-                        helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets_info.length + ' sheets detected)</span>';
+                        helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets_info.length + ' sheets available)</span>';
                     }
                 } else if (data.sheets && data.sheets.length > 0) {
-                    select.innerHTML = '<option value="ALL" data-title="AUTO">All Sheets (' + data.sheets.length + ' sheets)</option>';
                     data.sheets.forEach(s => {
                         const opt = document.createElement('option');
                         opt.value = s;
                         opt.textContent = s;
                         select.appendChild(opt);
                     });
+                    select.selectedIndex = 0;
                     if (helpText) {
-                        helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets.length + ' sheets detected)</span>';
+                        helpText.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Loaded: <strong>' + file.name + '</strong> (' + data.sheets.length + ' sheets available)</span>';
                     }
                 } else {
-                    select.innerHTML = '<option value="ALL" data-title="AUTO">Error reading sheets</option>';
+                    select.innerHTML = '<option value="" disabled selected>Error reading sheets</option>';
                     if (helpText) {
                         helpText.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> ' + (data.error || 'No sheets found') + '</span>';
                     }
                 }
             }).catch(err => {
-                select.innerHTML = '<option value="ALL" data-title="AUTO">Error reading sheets</option>';
+                select.innerHTML = '<option value="" disabled selected>Error reading sheets</option>';
                 if (helpText) {
                     helpText.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> ' + err.message + '</span>';
                 }
@@ -558,6 +561,13 @@
             if (!excelFile) {
                 alert('Please upload a student Excel data file (.xlsx, .xls) first.');
                 document.getElementById('excelInput').focus();
+                return;
+            }
+
+            const sheetVal = document.getElementById('sheetSelect').value;
+            if (!sheetVal) {
+                alert('Please select a specific sheet to generate.');
+                document.getElementById('sheetSelect').focus();
                 return;
             }
 
