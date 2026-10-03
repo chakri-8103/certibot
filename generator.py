@@ -326,6 +326,31 @@ def get_random_date_between(start_date_str, end_date_str):
     except Exception:
         return datetime.datetime.now().strftime("%d.%m.%Y")
 
+def wrap_subject_text(can, text, font, size, max_w=325.0):
+    clean = re.sub(r'[\r\n]+.*', '', str(text)).strip()
+    clean = re.sub(r'\s+', ' ', clean)
+    if not clean:
+        return [""]
+    if can.stringWidth(clean, font, size) <= max_w:
+        return [clean]
+    words = clean.split()
+    lines = []
+    cur_line = []
+    for w in words:
+        test_line = " ".join(cur_line + [w]) if cur_line else w
+        if can.stringWidth(test_line, font, size) <= max_w:
+            cur_line.append(w)
+        else:
+            if cur_line:
+                lines.append(" ".join(cur_line))
+                cur_line = [w]
+            else:
+                lines.append(w)
+                cur_line = []
+    if cur_line:
+        lines.append(" ".join(cur_line))
+    return lines
+
 def generate_single_pdf(
     pristine_template_path,
     student_record,
@@ -418,7 +443,7 @@ def generate_single_pdf(
             can.drawString(230.04, ry(240.96), l1)
 
     # 4. Date
-    can.setFont(FONT_REGULAR, 10.7)
+    can.setFont(FONT_BOLD, 10.7)
     can.drawString(33.72, ry(771.24), f"DATE : {issue_date}")
 
     # 5. Table Rows
@@ -428,28 +453,30 @@ def generate_single_pdf(
 
     num_subs = len(subjects_info)
 
-    # Uniform font size for ALL subjects in this marksheet
-    # Base size according to subject count
+    # Base font sizes according to number of subjects:
+    # If standard (<= 7 subjects), use size 12.0 as requested.
+    # If more subjects (> 7), decrease size accordingly so rows fit neatly.
     if num_subs <= 7:
-        base_sub_size = 9.5
-        table_num_size = 10.5
+        base_sub_size = 12.0
+        table_num_size = 12.0
     elif num_subs == 8:
-        base_sub_size = 8.8
-        table_num_size = 9.8
+        base_sub_size = 11.2
+        table_num_size = 11.2
     elif num_subs == 9:
-        base_sub_size = 8.2
-        table_num_size = 9.2
-    else:  # 10 or more subjects
-        base_sub_size = 7.6
-        table_num_size = 8.5
+        base_sub_size = 10.5
+        table_num_size = 10.5
+    elif num_subs == 10:
+        base_sub_size = 9.8
+        table_num_size = 9.8
+    else:  # more than 10 subjects
+        base_sub_size = max(8.0, round(12.0 - (num_subs - 7) * 1.0, 1))
+        table_num_size = base_sub_size
 
-    # Check if ANY subject name is too long to fit in the column (width ~ 320 pt)
-    # If any subject overflows, scale down the uniform font size for ALL subjects
-    max_col_w = 320.0
-    for sub in subjects_info:
-        s_title = str(sub.get("display_name", "")).strip()
-        while can.stringWidth(s_title, FONT_REGULAR, base_sub_size) > max_col_w and base_sub_size > 6.0:
-            base_sub_size -= 0.2
+    max_col_w = 325.0
+
+    # Ensure no subject overflows beyond 2 lines (double line); scale down base_sub_size if needed
+    while any(len(wrap_subject_text(can, sub.get("display_name", ""), FONT_BOLD, base_sub_size, max_col_w)) > 2 for sub in subjects_info) and base_sub_size > 7.0:
+        base_sub_size -= 0.5
 
     uniform_sub_size = round(base_sub_size, 1)
 
@@ -464,7 +491,9 @@ def generate_single_pdf(
         row_y_starts = [336.60 + (i * step) for i in range(num_subs)]
 
     for i, sub in enumerate(subjects_info):
-        sname = str(sub["display_name"]).strip()
+        raw_sname = str(sub["display_name"]).strip()
+        sname = re.sub(r'[\r\n]+.*', '', raw_sname).strip()
+        sname = re.sub(r'\s+', ' ', sname)
         cred = sub["credits"]
         gr = str(sub["grade"]).strip().upper()
 
@@ -479,12 +508,23 @@ def generate_single_pdf(
 
         y_top = row_y_starts[i] if i < len(row_y_starts) else 336.60 + (i * 32.5)
 
-        # All subjects use the EXACT SAME uniform font size
-        can.setFont(FONT_REGULAR, uniform_sub_size)
-        can.drawString(33.60, ry(y_top), sname)
+        # Subject name wrapping and rendering in Book Antiqua Bold (size 14 or scaled)
+        lines = wrap_subject_text(can, sname, FONT_BOLD, uniform_sub_size, max_col_w)
+        can.setFont(FONT_BOLD, uniform_sub_size)
+        if len(lines) == 1:
+            can.drawString(33.60, ry(y_top), lines[0])
+        elif len(lines) == 2:
+            leading = uniform_sub_size * 0.92
+            can.drawString(33.60, ry(y_top - (leading / 2.0)), lines[0])
+            can.drawString(33.60, ry(y_top + (leading / 2.0)), lines[1])
+        else:
+            leading = uniform_sub_size * 0.90
+            start_offset = -((len(lines) - 1) / 2.0) * leading
+            for line_idx, line_text in enumerate(lines):
+                can.drawString(33.60, ry(y_top + start_offset + (line_idx * leading)), line_text)
 
-        # Table numbers & Grade in Book Antiqua
-        can.setFont(FONT_REGULAR, table_num_size)
+        # Table numbers & Grade in Book Antiqua Bold
+        can.setFont(FONT_BOLD, table_num_size)
         can.drawString(371.52, ry(y_top), str(cred))
         can.drawString(420.00, ry(y_top), gr)
         can.drawString(475.00, ry(y_top), str(gp))
@@ -627,9 +667,11 @@ def process_excel_and_generate_all(
                 cred = int(cred_val)
             except Exception:
                 cred = 3
+            clean_name = re.sub(r'[\r\n]+.*', '', str(col)).strip()
+            clean_name = re.sub(r'\s+', ' ', clean_name)
             subjects_info.append({
                 "col_key": col,
-                "display_name": str(col).strip(),
+                "display_name": clean_name if clean_name else str(col).strip(),
                 "credits": cred
             })
 
